@@ -5,18 +5,21 @@ const createTransporter = () => {
   const pass = process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
 
   if (!user || !pass) {
+    console.warn("⚠️ [EMAIL NOTICE] GMAIL_USER or GMAIL_APP_PASSWORD is not set in environment variables.");
     return null;
   }
 
   return nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
     auth: {
       user: user.trim(),
       pass: pass.trim().replace(/\s+/g, "") // strip spaces from App Password
     },
-    connectionTimeout: 4000,
-    greetingTimeout: 4000,
-    socketTimeout: 5000
+    tls: {
+      rejectUnauthorized: false
+    }
   });
 };
 
@@ -70,7 +73,7 @@ const sendOtpEmail = async (toEmail, name, otp) => {
 
   if (!transporter) {
     console.log(`\n========================================`);
-    console.log(`📧 [EMAIL LOG - NO SMTP CONFIGURED]`);
+    console.log(`📧 [EMAIL LOG - GMAIL CREDENTIALS MISSING IN RENDER]`);
     console.log(`To: ${toEmail}`);
     console.log(`🔑 Verification OTP: ${otp}`);
     console.log(`🔗 1-Click Verification Link: ${verifyUrl}`);
@@ -79,17 +82,12 @@ const sendOtpEmail = async (toEmail, name, otp) => {
   }
 
   try {
-    const sendPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("SMTP timeout after 4s")), 4000)
-    );
-
-    const info = await Promise.race([sendPromise, timeoutPromise]);
-    console.log(`✅ Verification email sent to ${toEmail} (Message ID: ${info.messageId})`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Verification email successfully sent to ${toEmail} (Message ID: ${info.messageId})`);
     return { success: true, simulated: false, verifyUrl };
   } catch (error) {
-    console.error("❌ Failed or timed out sending OTP email:", error.message);
-    return { success: true, simulated: true, otp, verifyUrl, error: error.message };
+    console.error("❌ Gmail SMTP error on Render:", error.message);
+    return { success: false, simulated: true, otp, verifyUrl, error: error.message };
   }
 };
 
