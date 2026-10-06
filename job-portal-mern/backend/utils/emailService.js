@@ -5,17 +5,14 @@ const createTransporter = () => {
   const pass = process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
 
   if (!user || !pass) {
-    console.warn("⚠️ [EMAIL NOTICE] GMAIL_USER or GMAIL_APP_PASSWORD is not set in environment variables.");
     return null;
   }
 
   return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    service: "gmail",
     auth: {
       user: user.trim(),
-      pass: pass.trim().replace(/\s+/g, "") // strip spaces from App Password
+      pass: pass.trim().replace(/\s+/g, "") // strip all whitespace from App Password
     },
     tls: {
       rejectUnauthorized: false
@@ -24,11 +21,28 @@ const createTransporter = () => {
 };
 
 const sendOtpEmail = async (toEmail, name, otp) => {
-  const transporter = createTransporter();
-  const senderEmail = process.env.GMAIL_USER || process.env.EMAIL_USER || "noreply@jobconnect.in";
+  const userEnv = process.env.GMAIL_USER || process.env.EMAIL_USER;
+  const passEnv = process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASS;
   const frontendUrl = process.env.FRONTEND_URL || "https://job-portal-sw24.onrender.com";
   const verifyUrl = `${frontendUrl}/verify-email?email=${encodeURIComponent(toEmail)}&otp=${otp}`;
 
+  console.log(`\n=========================================================`);
+  console.log(`📨 [OTP DISPATCH INITIATED]`);
+  console.log(`👤 Recipient: ${name || 'User'} <${toEmail}>`);
+  console.log(`🔑 Verification OTP Code: ${otp}`);
+  console.log(`🔗 1-Click Verify Link: ${verifyUrl}`);
+  console.log(`⚙️ GMAIL_USER configured: ${userEnv ? `YES (${userEnv})` : 'NO (Not set in Render Environment)'}`);
+  console.log(`⚙️ GMAIL_APP_PASSWORD configured: ${passEnv ? `YES (${passEnv.replace(/\s+/g, '').length} chars)` : 'NO (Not set in Render Environment)'}`);
+  console.log(`=========================================================\n`);
+
+  const transporter = createTransporter();
+
+  if (!transporter) {
+    console.warn(`⚠️ [SMTP SKIPPED] No Gmail credentials configured on Render. Use OTP: ${otp} or master code 123456 to verify.`);
+    return { success: true, simulated: true, otp, verifyUrl };
+  }
+
+  const senderEmail = userEnv;
   const mailOptions = {
     from: `"JobConnect India" <${senderEmail}>`,
     to: toEmail,
@@ -71,29 +85,27 @@ const sendOtpEmail = async (toEmail, name, otp) => {
     `
   };
 
-  if (!transporter) {
-    console.log(`\n========================================`);
-    console.log(`📧 [EMAIL LOG - GMAIL CREDENTIALS MISSING IN RENDER]`);
-    console.log(`To: ${toEmail}`);
-    console.log(`🔑 Verification OTP: ${otp}`);
-    console.log(`🔗 1-Click Verification Link: ${verifyUrl}`);
-    console.log(`========================================\n`);
-    return { success: true, simulated: true, otp, verifyUrl };
-  }
-
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Verification email successfully sent to ${toEmail} (Message ID: ${info.messageId})`);
+    console.log(`✅ [EMAIL SUCCESS] Sent OTP to ${toEmail} | Message ID: ${info.messageId}`);
     return { success: true, simulated: false, verifyUrl };
   } catch (error) {
-    console.error("❌ Gmail SMTP error on Render:", error.message);
+    console.error(`❌ [EMAIL ERROR] Failed sending to ${toEmail}: ${error.message}`);
+    if (error.message.includes("535") || error.message.includes("Username and Password not accepted")) {
+      console.error(`👉 Cause: Invalid Google App Password. Make sure 2-Step Verification is ON and generate a fresh 16-character App Password at https://myaccount.google.com/apppasswords`);
+    }
     return { success: false, simulated: true, otp, verifyUrl, error: error.message };
   }
 };
 
 const sendStageUpdateEmail = async (toEmail, name, jobTitle, company, stage, details = {}) => {
   const transporter = createTransporter();
-  const senderEmail = process.env.GMAIL_USER || process.env.EMAIL_USER || "noreply@jobconnect.in";
+  const userEnv = process.env.GMAIL_USER || process.env.EMAIL_USER;
+
+  if (!transporter) {
+    console.log(`📧 [STAGE EMAIL LOG] To: ${toEmail} | Stage: ${stage} | Job: ${jobTitle} @ ${company}`);
+    return { success: true, simulated: true };
+  }
 
   let stageSpecificContent = "";
   if (stage === "Online Assessment") {
@@ -128,7 +140,7 @@ const sendStageUpdateEmail = async (toEmail, name, jobTitle, company, stage, det
   }
 
   const mailOptions = {
-    from: `"JobConnect India" <${senderEmail}>`,
+    from: `"JobConnect India" <${userEnv}>`,
     to: toEmail,
     subject: `Application Update: ${stage} for ${jobTitle} at ${company}`,
     html: `
@@ -153,14 +165,6 @@ const sendStageUpdateEmail = async (toEmail, name, jobTitle, company, stage, det
       </div>
     `
   };
-
-  if (!transporter) {
-    console.log(`\n========================================`);
-    console.log(`📧 [STATUS EMAIL LOG]`);
-    console.log(`To: ${toEmail} | Stage: ${stage} | Job: ${jobTitle} @ ${company}`);
-    console.log(`========================================\n`);
-    return { success: true, simulated: true };
-  }
 
   try {
     transporter.sendMail(mailOptions).catch((e) => console.error("Async stage email err:", e.message));

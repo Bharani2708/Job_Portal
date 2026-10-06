@@ -56,7 +56,10 @@ const register = async (req, res) => {
         existing.role = role === "recruiter" ? "recruiter" : "jobseeker";
         await existing.save();
 
-        await sendOtpEmail(existing.email, existing.name, otp);
+        // Dispatch email in background without blocking API response
+        sendOtpEmail(existing.email, existing.name, otp).catch((e) =>
+          console.error("Async OTP dispatch error:", e.message)
+        );
 
         return res.status(200).json({
           message: "Account already exists but is unverified. A new verification code has been sent to your email.",
@@ -81,7 +84,10 @@ const register = async (req, res) => {
       otpExpires
     });
 
-    await sendOtpEmail(user.email, user.name, otp);
+    // Dispatch email in background without blocking API response
+    sendOtpEmail(user.email, user.name, otp).catch((e) =>
+      console.error("Async OTP dispatch error:", e.message)
+    );
 
     res.status(201).json({
       message: "Registration successful! Please verify your email with the 6-digit OTP sent.",
@@ -174,7 +180,10 @@ const resendOtp = async (req, res) => {
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    await sendOtpEmail(user.email, user.name, otp);
+    // Dispatch email in background
+    sendOtpEmail(user.email, user.name, otp).catch((e) =>
+      console.error("Async OTP dispatch error:", e.message)
+    );
 
     res.json({
       message: "A fresh verification OTP has been sent to your email."
@@ -208,7 +217,10 @@ const login = async (req, res) => {
       user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save();
 
-      await sendOtpEmail(user.email, user.name, otp);
+      // Dispatch email in background
+      sendOtpEmail(user.email, user.name, otp).catch((e) =>
+        console.error("Async OTP dispatch error:", e.message)
+      );
 
       return res.status(403).json({
         message: "Your email address is not verified yet. An OTP has been sent to complete verification.",
