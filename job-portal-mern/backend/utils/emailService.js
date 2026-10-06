@@ -1,4 +1,10 @@
 const nodemailer = require("nodemailer");
+const dns = require("dns");
+
+// Force IPv4 resolution to prevent IPv6 ENETUNREACH errors on Render cloud containers
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder("ipv4first");
+}
 
 const createTransporter = () => {
   const user = process.env.GMAIL_USER || process.env.EMAIL_USER;
@@ -14,6 +20,7 @@ const createTransporter = () => {
       user: user.trim(),
       pass: pass.trim().replace(/\s+/g, "") // strip spaces from App Password
     },
+    family: 4, // Force IPv4 explicitly
     tls: {
       rejectUnauthorized: false
     }
