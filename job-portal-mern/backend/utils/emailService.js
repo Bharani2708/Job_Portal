@@ -12,7 +12,7 @@ const createTransporter = () => {
     service: "gmail",
     auth: {
       user: user.trim(),
-      pass: pass.trim().replace(/\s+/g, "") // strip all whitespace from App Password
+      pass: pass.trim().replace(/\s+/g, "") // strip spaces from App Password
     },
     tls: {
       rejectUnauthorized: false
@@ -31,14 +31,14 @@ const sendOtpEmail = async (toEmail, name, otp) => {
   console.log(`👤 Recipient: ${name || 'User'} <${toEmail}>`);
   console.log(`🔑 Verification OTP Code: ${otp}`);
   console.log(`🔗 1-Click Verify Link: ${verifyUrl}`);
-  console.log(`⚙️ GMAIL_USER configured: ${userEnv ? `YES (${userEnv})` : 'NO (Not set in Render Environment)'}`);
-  console.log(`⚙️ GMAIL_APP_PASSWORD configured: ${passEnv ? `YES (${passEnv.replace(/\s+/g, '').length} chars)` : 'NO (Not set in Render Environment)'}`);
+  console.log(`⚙️ GMAIL_USER configured: ${userEnv ? `YES (${userEnv})` : 'NO'}`);
+  console.log(`⚙️ GMAIL_APP_PASSWORD configured: ${passEnv ? `YES (${passEnv.replace(/\s+/g, '').length} chars)` : 'NO'}`);
   console.log(`=========================================================\n`);
 
   const transporter = createTransporter();
 
   if (!transporter) {
-    console.warn(`⚠️ [SMTP SKIPPED] No Gmail credentials configured on Render. Use OTP: ${otp} or master code 123456 to verify.`);
+    console.warn(`⚠️ [SMTP SKIPPED] No Gmail credentials configured on Render.`);
     return { success: true, simulated: true, otp, verifyUrl };
   }
 
@@ -90,10 +90,7 @@ const sendOtpEmail = async (toEmail, name, otp) => {
     console.log(`✅ [EMAIL SUCCESS] Sent OTP to ${toEmail} | Message ID: ${info.messageId}`);
     return { success: true, simulated: false, verifyUrl };
   } catch (error) {
-    console.error(`❌ [EMAIL ERROR] Failed sending to ${toEmail}: ${error.message}`);
-    if (error.message.includes("535") || error.message.includes("Username and Password not accepted")) {
-      console.error(`👉 Cause: Invalid Google App Password. Make sure 2-Step Verification is ON and generate a fresh 16-character App Password at https://myaccount.google.com/apppasswords`);
-    }
+    console.error(`❌ [EMAIL ERROR] Failed sending to ${toEmail}:`, error.message);
     return { success: false, simulated: true, otp, verifyUrl, error: error.message };
   }
 };
