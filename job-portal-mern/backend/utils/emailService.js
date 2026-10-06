@@ -12,20 +12,24 @@ const createTransporter = () => {
     service: "gmail",
     auth: {
       user: user.trim(),
-      pass: pass.trim()
-    }
+      pass: pass.trim().replace(/\s+/g, "") // strip spaces from App Password
+    },
+    connectionTimeout: 4000,
+    greetingTimeout: 4000,
+    socketTimeout: 5000
   });
 };
 
 const sendOtpEmail = async (toEmail, name, otp) => {
   const transporter = createTransporter();
   const senderEmail = process.env.GMAIL_USER || process.env.EMAIL_USER || "noreply@jobconnect.in";
-  const verifyUrl = `http://localhost:5173/verify-email?email=${encodeURIComponent(toEmail)}&otp=${otp}`;
+  const frontendUrl = process.env.FRONTEND_URL || "https://job-portal-sw24.onrender.com";
+  const verifyUrl = `${frontendUrl}/verify-email?email=${encodeURIComponent(toEmail)}&otp=${otp}`;
 
   const mailOptions = {
     from: `"JobConnect India" <${senderEmail}>`,
     to: toEmail,
-    subject: `🔐 Verify Your JobConnect India Account`,
+    subject: `🔐 Verify Your JobConnect India Account: ${otp}`,
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
         <div style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); padding: 32px 24px; text-align: center; color: white;">
@@ -66,9 +70,8 @@ const sendOtpEmail = async (toEmail, name, otp) => {
 
   if (!transporter) {
     console.log(`\n========================================`);
-    console.log(`📧 [DEV EMAIL SIMULATION]`);
+    console.log(`📧 [EMAIL LOG - NO SMTP CONFIGURED]`);
     console.log(`To: ${toEmail}`);
-    console.log(`Subject: ${mailOptions.subject}`);
     console.log(`🔑 Verification OTP: ${otp}`);
     console.log(`🔗 1-Click Verification Link: ${verifyUrl}`);
     console.log(`========================================\n`);
@@ -76,11 +79,16 @@ const sendOtpEmail = async (toEmail, name, otp) => {
   }
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const sendPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("SMTP timeout after 4s")), 4000)
+    );
+
+    const info = await Promise.race([sendPromise, timeoutPromise]);
     console.log(`✅ Verification email sent to ${toEmail} (Message ID: ${info.messageId})`);
     return { success: true, simulated: false, verifyUrl };
   } catch (error) {
-    console.error("❌ Failed to send OTP email:", error.message);
+    console.error("❌ Failed or timed out sending OTP email:", error.message);
     return { success: true, simulated: true, otp, verifyUrl, error: error.message };
   }
 };
@@ -141,7 +149,7 @@ const sendStageUpdateEmail = async (toEmail, name, jobTitle, company, stage, det
           </div>
           ${stageSpecificContent}
           <p style="font-size: 14px; color: #64748b; margin-top: 24px;">
-            Please visit your <a href="http://localhost:5173/applications" style="color: #0284c7; font-weight: 600;">JobConnect Applications Dashboard</a> for more details and next steps.
+            Please visit your <a href="https://job-portal-sw24.onrender.com/applications" style="color: #0284c7; font-weight: 600;">JobConnect Applications Dashboard</a> for more details and next steps.
           </p>
         </div>
       </div>
@@ -150,14 +158,14 @@ const sendStageUpdateEmail = async (toEmail, name, jobTitle, company, stage, det
 
   if (!transporter) {
     console.log(`\n========================================`);
-    console.log(`📧 [DEV STATUS EMAIL SIMULATION]`);
+    console.log(`📧 [STATUS EMAIL LOG]`);
     console.log(`To: ${toEmail} | Stage: ${stage} | Job: ${jobTitle} @ ${company}`);
     console.log(`========================================\n`);
     return { success: true, simulated: true };
   }
 
   try {
-    await transporter.sendMail(mailOptions);
+    transporter.sendMail(mailOptions).catch((e) => console.error("Async stage email err:", e.message));
     return { success: true };
   } catch (error) {
     console.error("❌ Failed to send stage email:", error.message);

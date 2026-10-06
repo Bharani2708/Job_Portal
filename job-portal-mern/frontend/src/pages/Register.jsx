@@ -297,23 +297,6 @@ export default function Register() {
             </p>
           </div>
 
-          {devOtp && (
-            <div className="dev-otp-banner">
-              <Info size={16} color="#0369a1" />
-              <div>
-                <strong>Dev Mode Quick Code: </strong>
-                <span className="dev-otp-code">{devOtp}</span>
-                <button 
-                  type="button" 
-                  className="dev-otp-fill-btn"
-                  onClick={() => setOtp(devOtp)}
-                >
-                  Auto-fill
-                </button>
-              </div>
-            </div>
-          )}
-
           {error && (
             <div className="error">
               <AlertCircle size={18} />
