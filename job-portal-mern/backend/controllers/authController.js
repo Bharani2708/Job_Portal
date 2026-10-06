@@ -47,7 +47,6 @@ const register = async (req, res) => {
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
       if (!existing.isVerified) {
-        // Regenerate OTP and allow them to complete verification
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         existing.otp = otp;
         existing.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -57,13 +56,12 @@ const register = async (req, res) => {
         existing.role = role === "recruiter" ? "recruiter" : "jobseeker";
         await existing.save();
 
-        const emailResult = await sendOtpEmail(existing.email, existing.name, otp);
+        await sendOtpEmail(existing.email, existing.name, otp);
 
         return res.status(200).json({
-          message: "Account already exists but is unverified. A new verification OTP has been sent.",
+          message: "Account already exists but is unverified. A new verification code has been sent to your email.",
           requiresVerification: true,
-          email: existing.email,
-          devOtp: emailResult.simulated ? otp : undefined
+          email: existing.email
         });
       }
       return res.status(409).json({ message: "Email already registered. Please login." });
@@ -83,13 +81,12 @@ const register = async (req, res) => {
       otpExpires
     });
 
-    const emailResult = await sendOtpEmail(user.email, user.name, otp);
+    await sendOtpEmail(user.email, user.name, otp);
 
     res.status(201).json({
       message: "Registration successful! Please verify your email with the 6-digit OTP sent.",
       requiresVerification: true,
-      email: user.email,
-      devOtp: emailResult.simulated ? otp : undefined
+      email: user.email
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -177,11 +174,10 @@ const resendOtp = async (req, res) => {
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    const emailResult = await sendOtpEmail(user.email, user.name, otp);
+    await sendOtpEmail(user.email, user.name, otp);
 
     res.json({
-      message: "A fresh verification OTP has been sent to your email.",
-      devOtp: emailResult.simulated ? otp : undefined
+      message: "A fresh verification OTP has been sent to your email."
     });
   } catch (error) {
     console.error("Resend OTP error:", error);
@@ -212,13 +208,12 @@ const login = async (req, res) => {
       user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save();
 
-      const emailResult = await sendOtpEmail(user.email, user.name, otp);
+      await sendOtpEmail(user.email, user.name, otp);
 
       return res.status(403).json({
         message: "Your email address is not verified yet. An OTP has been sent to complete verification.",
         requiresVerification: true,
-        email: user.email,
-        devOtp: emailResult.simulated ? otp : undefined
+        email: user.email
       });
     }
 

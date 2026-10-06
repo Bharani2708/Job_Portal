@@ -29,7 +29,6 @@ export default function Login() {
   // OTP Verification state
   const [step, setStep] = useState("login"); // 'login' | 'otp'
   const [otp, setOtp] = useState("");
-  const [devOtp, setDevOtp] = useState(null);
   const [resendTimer, setResendTimer] = useState(0);
 
   const dispatch = useDispatch();
@@ -56,7 +55,6 @@ export default function Login() {
       if (err.response?.status === 403 && err.response?.data?.requiresVerification) {
         setStep("otp");
         setSuccessMsg("Your account is not verified yet. Please enter the OTP sent to your email.");
-        if (err.response?.data?.devOtp) setDevOtp(err.response.data.devOtp);
         setResendTimer(60);
       } else {
         setError(err.response?.data?.message || "Invalid email or password. Please try again.");
@@ -93,7 +91,6 @@ export default function Login() {
     try {
       const { data } = await api.post("/auth/resend-otp", { email: form.email });
       setSuccessMsg("A new verification code has been sent.");
-      if (data.devOtp) setDevOtp(data.devOtp);
       setResendTimer(60);
     } catch (err) {
       setError(err.response?.data?.message || "Could not resend OTP.");

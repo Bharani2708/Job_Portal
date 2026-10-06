@@ -31,7 +31,6 @@ export default function Register() {
     role: "jobseeker"
   });
   const [otp, setOtp] = useState("");
-  const [devOtp, setDevOtp] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -87,7 +86,6 @@ export default function Register() {
       if (data.requiresVerification) {
         setStep("otp");
         setSuccessMsg(data.message || "Verification OTP sent to your email.");
-        if (data.devOtp) setDevOtp(data.devOtp);
         setResendTimer(60);
       } else {
         dispatch(setCredentials(data));
@@ -127,7 +125,6 @@ export default function Register() {
     try {
       const { data } = await api.post("/auth/resend-otp", { email: form.email });
       setSuccessMsg(data.message || "A new OTP has been sent to your email.");
-      if (data.devOtp) setDevOtp(data.devOtp);
       setResendTimer(60);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to resend OTP.");
