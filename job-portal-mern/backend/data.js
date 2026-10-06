@@ -1,0 +1,174 @@
+const mongoose = require("mongoose");
+require("dotenv").config();
+
+const Job = require("./models/Job");
+const User = require("./models/User");
+
+const jobs = [
+  {
+    title: "Frontend Developer",
+    description:
+      "We are looking for a Frontend Developer to build responsive and user-friendly web applications.",
+    company: "TCS",
+    location: "Chennai",
+    salary: "₹4 - ₹6 LPA",
+    skills: ["HTML", "CSS", "JavaScript", "React"],
+    experience: "0-2 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "MERN Stack Developer",
+    description:
+      "Looking for a fresher MERN Stack Developer to develop and maintain modern web applications.",
+    company: "Zoho",
+    location: "Chennai",
+    salary: "₹5 - ₹8 LPA",
+    skills: ["MongoDB", "Express.js", "React", "Node.js"],
+    experience: "0-2 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "React Developer",
+    description:
+      "Join our development team and build scalable React applications using reusable components.",
+    company: "Freshworks",
+    location: "Bangalore",
+    salary: "₹6 - ₹10 LPA",
+    skills: ["React", "JavaScript", "Redux", "HTML", "CSS"],
+    experience: "1-3 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "Junior Web Developer",
+    description:
+      "Entry-level opportunity for candidates interested in frontend web development.",
+    company: "Wipro",
+    location: "Coimbatore",
+    salary: "₹3 - ₹5 LPA",
+    skills: ["HTML", "CSS", "Bootstrap", "JavaScript"],
+    experience: "0-1 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "Backend Developer",
+    description:
+      "Develop backend APIs and services using Node.js, Express.js and MongoDB.",
+    company: "Accenture",
+    location: "Bangalore",
+    salary: "₹5 - ₹9 LPA",
+    skills: ["Node.js", "Express.js", "MongoDB", "REST API"],
+    experience: "1-3 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "Full Stack Developer",
+    description:
+      "Work on both frontend and backend development for enterprise web applications.",
+    company: "HCL Technologies",
+    location: "Chennai",
+    salary: "₹4 - ₹7 LPA",
+    skills: ["React", "Node.js", "MongoDB", "Express.js"],
+    experience: "0-2 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "UI Developer",
+    description:
+      "Create responsive and visually appealing user interfaces for web applications.",
+    company: "Cognizant",
+    location: "Chennai",
+    salary: "₹4 - ₹6 LPA",
+    skills: ["HTML", "CSS", "Bootstrap", "JavaScript"],
+    experience: "0-2 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "JavaScript Developer",
+    description:
+      "Develop interactive web applications using modern JavaScript technologies.",
+    company: "Infosys",
+    location: "Pune",
+    salary: "₹4 - ₹7 LPA",
+    skills: ["JavaScript", "React", "Git", "REST API"],
+    experience: "1-2 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "Software Engineer",
+    description:
+      "Work with the engineering team to develop and maintain software applications.",
+    company: "Tech Mahindra",
+    location: "Hyderabad",
+    salary: "₹4 - ₹7 LPA",
+    skills: ["JavaScript", "React", "Node.js", "Git"],
+    experience: "0-2 Years",
+    jobType: "Full-time"
+  },
+
+  {
+    title: "Frontend Intern",
+    description:
+      "Learn and work on real-world frontend development projects using React.",
+    company: "App Innovation Technologies",
+    location: "Coimbatore",
+    salary: "₹10,000 - ₹15,000/month",
+    skills: ["HTML", "CSS", "JavaScript", "React"],
+    experience: "Fresher",
+    jobType: "Internship"
+  }
+];
+
+const seedDatabase = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+
+    console.log("MongoDB connected");
+
+    const recruiter = await User.findOne({
+      role: "recruiter"
+    });
+
+    if (!recruiter) {
+      console.log("No recruiter found.");
+      console.log("Please create a recruiter account first.");
+      process.exit(1);
+    }
+
+    console.log("Recruiter found:", recruiter._id);
+
+    const jobsWithRecruiter = jobs.map((job) => ({
+      ...job,
+      recruiter: recruiter._id
+    }));
+
+    await Job.deleteMany();
+
+    await Job.insertMany(jobsWithRecruiter);
+
+    console.log(
+      `${jobsWithRecruiter.length} jobs inserted successfully`
+    );
+
+    await mongoose.connection.close();
+
+    console.log("MongoDB connection closed");
+
+    process.exit(0);
+  } catch (error) {
+    console.error("Seeding error:", error);
+
+    await mongoose.connection.close();
+
+    process.exit(1);
+  }
+};
+
+seedDatabase();
