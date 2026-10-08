@@ -77,7 +77,7 @@ const seedData = async () => {
       {
         name: "Bharani",
         email: "bharanikiruofl139@gmail.com",
-        password: defaultPassword,
+        password: "Bharani@2708",
         role: "recruiter",
         isVerified: true,
       },
@@ -91,7 +91,7 @@ const seedData = async () => {
       {
         name: "Rahul Sharma",
         email: "seeker.rahul@gmail.com",
-        password: defaultPassword,
+        password: "Seeker@123",
         role: "jobseeker",
         isVerified: true,
       },
@@ -99,7 +99,7 @@ const seedData = async () => {
       {
         name: "Priya Nair",
         email: "seeker.priya@gmail.com",
-        password: defaultPassword,
+        password: "Seeker@123",
         role: "jobseeker",
         isVerified: true,
       },
@@ -107,7 +107,7 @@ const seedData = async () => {
       {
         name: "Amit Patel",
         email: "seeker.amit@gmail.com",
-        password: defaultPassword,
+        password: "Seeker@123",
         role: "jobseeker",
         isVerified: true,
       },
@@ -115,7 +115,7 @@ const seedData = async () => {
       {
         name: "Sneha Reddy",
         email: "seeker.sneha@gmail.com",
-        password: defaultPassword,
+        password: "Seeker@123",
         role: "jobseeker",
         isVerified: true,
       },
