@@ -64,7 +64,12 @@ const seedData = async () => {
       "👥 Creating verified Recruiter & Job Seeker accounts..."
     );
 
-    const defaultPassword = await bcrypt.hash(
+    const recruiterPassword = await bcrypt.hash(
+      "Bharani@2708",
+      10
+    );
+
+    const seekerPassword = await bcrypt.hash(
       "Password@123",
       10
     );
@@ -75,9 +80,9 @@ const seedData = async () => {
 
     const recruiters = await User.create([
       {
-        name: "Bharani",
+        name: "Bharani Recruiter",
         email: "bharanikiruofl139@gmail.com",
-        password: "Bharani@2708",
+        password: recruiterPassword,
         role: "recruiter",
         isVerified: true,
       },
@@ -91,7 +96,7 @@ const seedData = async () => {
       {
         name: "Rahul Sharma",
         email: "seeker.rahul@gmail.com",
-        password: "Seeker@123",
+        password: seekerPassword,
         role: "jobseeker",
         isVerified: true,
       },
@@ -99,7 +104,7 @@ const seedData = async () => {
       {
         name: "Priya Nair",
         email: "seeker.priya@gmail.com",
-        password: "Seeker@123",
+        password: seekerPassword,
         role: "jobseeker",
         isVerified: true,
       },
@@ -107,7 +112,7 @@ const seedData = async () => {
       {
         name: "Amit Patel",
         email: "seeker.amit@gmail.com",
-        password: "Seeker@123",
+        password: seekerPassword,
         role: "jobseeker",
         isVerified: true,
       },
@@ -115,7 +120,7 @@ const seedData = async () => {
       {
         name: "Sneha Reddy",
         email: "seeker.sneha@gmail.com",
-        password: "Seeker@123",
+        password: seekerPassword,
         role: "jobseeker",
         isVerified: true,
       },
@@ -983,7 +988,7 @@ const seedData = async () => {
     );
 
     console.log(
-      "Password: Password@123\n"
+      "Password: Bharani@2708\n"
     );
 
     console.log(

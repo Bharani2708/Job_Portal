@@ -185,4 +185,87 @@ const sendStageUpdateEmail = async (toEmail, name, jobTitle, company, stage, det
   }
 };
 
-module.exports = { sendOtpEmail, sendStageUpdateEmail };
+const sendNewApplicationRecruiterEmail = async ({
+  recruiterEmail = "bharanikiruofl139@gmail.com",
+  applicantName,
+  applicantEmail,
+  jobTitle,
+  company,
+  location,
+  salary,
+  appliedAt = new Date()
+}) => {
+  const userEnv = process.env.GMAIL_USER || process.env.EMAIL_USER;
+  const transporter = createTransporter();
+
+  console.log(`\n=========================================================`);
+  console.log(`📨 [NEW APPLICATION NOTIFICATION DISPATCHED]`);
+  console.log(`👤 Applicant: ${applicantName} <${applicantEmail}>`);
+  console.log(`💼 Applied For: ${jobTitle} @ ${company}`);
+  console.log(`🏢 Recruiter Recipient: ${recruiterEmail}`);
+  console.log(`=========================================================\n`);
+
+  if (!transporter) {
+    console.warn(`⚠️ [SMTP SKIPPED] No Gmail credentials configured.`);
+    return { success: true, simulated: true };
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL || "https://job-portal-sw24.onrender.com";
+  const portalUrl = `${frontendUrl}/recruiter/applications`;
+
+  const mailOptions = {
+    from: `"JobConnect Alerts" <${userEnv}>`,
+    to: recruiterEmail,
+    subject: `🔔 New Candidate Applied: ${applicantName} for ${jobTitle} (${company})`,
+    html: `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+        <div style="background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%); padding: 30px 24px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 800;">JobConnect India • Recruiter Alert</h1>
+          <p style="margin: 6px 0 0; font-size: 14px; opacity: 0.9;">New Job Application Received</p>
+        </div>
+        <div style="padding: 28px 24px; color: #1e293b;">
+          <h2 style="margin: 0 0 16px; font-size: 18px; color: #0f172a;">Hello Recruiter,</h2>
+          <p style="font-size: 15px; color: #475569; line-height: 1.6; margin: 0 0 20px;">
+            A candidate has just submitted their application for one of your posted roles on JobConnect India.
+          </p>
+
+          <div style="background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 24px;">
+            <h3 style="margin: 0 0 12px; font-size: 16px; color: #0369a1; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">📋 Application Details</h3>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Candidate Name:</strong> ${applicantName}</p>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Candidate Email:</strong> <a href="mailto:${applicantEmail}" style="color: #0284c7;">${applicantEmail}</a></p>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Position:</strong> ${jobTitle}</p>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Company:</strong> ${company}</p>
+            ${location ? `<p style="margin: 6px 0; font-size: 14px;"><strong>Location:</strong> ${location}</p>` : ''}
+            ${salary ? `<p style="margin: 6px 0; font-size: 14px;"><strong>Salary Package:</strong> ${salary}</p>` : ''}
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Applied At:</strong> ${new Date(appliedAt).toLocaleString('en-IN')}</p>
+          </div>
+
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${portalUrl}" style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); color: #ffffff; padding: 14px 32px; border-radius: 30px; font-size: 15px; font-weight: 700; text-decoration: none; display: inline-block; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);">
+              View & Manage Candidate Applications →
+            </a>
+          </div>
+
+          <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 20px 0 0; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+            You can advance this candidate to Online Assessment, Technical Interview, HR Round, or release an Offer directly from your recruiter dashboard.
+          </p>
+        </div>
+        <div style="background: #f8fafc; padding: 14px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+          © ${new Date().getFullYear()} JobConnect India • Recruiter Notification Engine
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ [RECRUITER EMAIL SUCCESS] Sent alert to ${recruiterEmail} | Message ID: ${info.messageId}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`❌ [RECRUITER EMAIL ERROR] Failed sending to ${recruiterEmail}:`, error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+module.exports = { sendOtpEmail, sendStageUpdateEmail, sendNewApplicationRecruiterEmail };
+

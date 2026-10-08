@@ -1,7 +1,10 @@
 const Application = require("../models/Application");
 const Job = require("../models/Job");
+const User = require("../models/User");
 const Notification = require("../models/Notification");
-const { sendStageUpdateEmail } = require("../utils/emailService");
+const { sendStageUpdateEmail, sendNewApplicationRecruiterEmail } = require("../utils/emailService");
+
+const PRIMARY_RECRUITER_EMAIL = "bharanikiruofl139@gmail.com";
 
 const apply = async (req, res) => {
   try {
@@ -10,7 +13,7 @@ const apply = async (req, res) => {
     const job = await Job.findById(jobId).populate("recruiter", "name email");
     if (!job) return res.status(404).json({ message: "Job not found" });
 
-    if (job.recruiter._id.toString() === req.user.id) {
+    if (job.recruiter && job.recruiter._id && job.recruiter._id.toString() === req.user.id) {
       return res.status(400).json({ message: "You cannot apply to your own job" });
     }
 
@@ -37,17 +40,38 @@ const apply = async (req, res) => {
       ]
     });
 
-    // Create In-App Notification for Recruiter
-    await Notification.create({
-      recipient: job.recruiter._id,
-      sender: req.user.id,
-      title: "New Job Application Received",
-      message: `${req.user.name} applied for "${job.title}"`,
-      type: "info",
-      link: "/recruiter/applications"
-    });
+    // Find the primary recruiter (bharanikiruofl139@gmail.com)
+    const primaryRecruiter = await User.findOne({ email: PRIMARY_RECRUITER_EMAIL });
 
-    // Create In-App Notification for Applicant
+    // 1. Create In-App Notification for Primary Recruiter (bharanikiruofl139@gmail.com)
+    if (primaryRecruiter) {
+      await Notification.create({
+        recipient: primaryRecruiter._id,
+        sender: req.user.id,
+        title: "New Job Application Received",
+        message: `${req.user.name} applied for "${job.title}" at ${job.company}`,
+        type: "info",
+        link: "/recruiter/applications"
+      });
+    }
+
+    // 2. Also create In-App Notification for job.recruiter if different from primary recruiter
+    if (
+      job.recruiter &&
+      job.recruiter._id &&
+      (!primaryRecruiter || primaryRecruiter._id.toString() !== job.recruiter._id.toString())
+    ) {
+      await Notification.create({
+        recipient: job.recruiter._id,
+        sender: req.user.id,
+        title: "New Job Application Received",
+        message: `${req.user.name} applied for "${job.title}" at ${job.company}`,
+        type: "info",
+        link: "/recruiter/applications"
+      });
+    }
+
+    // 3. Create In-App Notification for Applicant
     await Notification.create({
       recipient: req.user.id,
       title: "Application Submitted",
@@ -55,6 +79,18 @@ const apply = async (req, res) => {
       type: "info",
       link: `/applications?appId=${application._id}`
     });
+
+    // 4. Send Email Notification directly to bharanikiruofl139@gmail.com
+    sendNewApplicationRecruiterEmail({
+      recruiterEmail: PRIMARY_RECRUITER_EMAIL,
+      applicantName: req.user.name,
+      applicantEmail: req.user.email,
+      jobTitle: job.title,
+      company: job.company,
+      location: job.location,
+      salary: job.salary,
+      appliedAt: new Date()
+    }).catch((e) => console.error("Async recruiter application email alert error:", e.message));
 
     const populated = await application.populate([
       { path: "job", select: "title company location salary jobType" },
@@ -84,10 +120,16 @@ const myApplications = async (req, res) => {
 
 const recruiterApplications = async (req, res) => {
   try {
-    const jobs = await Job.find({ recruiter: req.user.id }).select("_id");
-    const jobIds = jobs.map((job) => job._id);
+    const isPrimaryRecruiter = req.user.email === PRIMARY_RECRUITER_EMAIL;
+    let query = {};
 
-    const applications = await Application.find({ job: { $in: jobIds } })
+    if (!isPrimaryRecruiter) {
+      const jobs = await Job.find({ recruiter: req.user.id }).select("_id");
+      const jobIds = jobs.map((job) => job._id);
+      query = { job: { $in: jobIds } };
+    }
+
+    const applications = await Application.find(query)
       .populate("job", "title company location salary jobType")
       .populate("applicant", "name email")
       .populate("timeline.updatedBy", "name role")
@@ -129,7 +171,10 @@ const updateStage = async (req, res) => {
       return res.status(404).json({ message: "Application not found" });
     }
 
-    if (application.job.recruiter.toString() !== req.user.id) {
+    const isPrimaryRecruiter = req.user.email === PRIMARY_RECRUITER_EMAIL;
+    const isJobOwner = application.job && application.job.recruiter && application.job.recruiter.toString() === req.user.id;
+
+    if (!isJobOwner && !isPrimaryRecruiter) {
       return res.status(403).json({ message: "You are not authorized to manage this application" });
     }
 

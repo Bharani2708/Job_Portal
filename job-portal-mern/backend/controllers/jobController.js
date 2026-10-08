@@ -1,5 +1,7 @@
 const Job = require("../models/Job");
 
+const PRIMARY_RECRUITER_EMAIL = "bharanikiruofl139@gmail.com";
+
 const createJob = async (req, res) => {
   try {
     const { title, description, company, location, salary, skills, experience, jobType } = req.body;
@@ -69,7 +71,10 @@ const getJob = async (req, res) => {
 
 const updateJob = async (req, res) => {
   try {
-    const job = await Job.findOne({ _id: req.params.id, recruiter: req.user.id });
+    const isPrimaryRecruiter = req.user.email === PRIMARY_RECRUITER_EMAIL;
+    const query = isPrimaryRecruiter ? { _id: req.params.id } : { _id: req.params.id, recruiter: req.user.id };
+
+    const job = await Job.findOne(query);
     if (!job) return res.status(404).json({ message: "Job not found or not owned by you" });
 
     const allowed = ["title", "description", "company", "location", "salary", "skills", "experience", "jobType"];
@@ -90,10 +95,10 @@ const updateJob = async (req, res) => {
 
 const deleteJob = async (req, res) => {
   try {
-    const job = await Job.findOneAndDelete({
-      _id: req.params.id,
-      recruiter: req.user.id
-    });
+    const isPrimaryRecruiter = req.user.email === PRIMARY_RECRUITER_EMAIL;
+    const query = isPrimaryRecruiter ? { _id: req.params.id } : { _id: req.params.id, recruiter: req.user.id };
+
+    const job = await Job.findOneAndDelete(query);
 
     if (!job) return res.status(404).json({ message: "Job not found or not owned by you" });
 
@@ -105,7 +110,10 @@ const deleteJob = async (req, res) => {
 
 const myJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ recruiter: req.user.id }).sort({ createdAt: -1 });
+    const isPrimaryRecruiter = req.user.email === PRIMARY_RECRUITER_EMAIL;
+    const query = isPrimaryRecruiter ? {} : { recruiter: req.user.id };
+
+    const jobs = await Job.find(query).sort({ createdAt: -1 });
     res.json(jobs);
   } catch (error) {
     res.status(500).json({ message: "Could not fetch your jobs" });
